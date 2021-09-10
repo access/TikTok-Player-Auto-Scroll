@@ -1,5 +1,5 @@
 console.log("TikTok Player connected.");
-let video = null, videoEventElement = null, rightSidebar = null, nowIsFullScreen = false;
+let video = null, videoEventElement = null, videoInfoBar = null, nowIsFullScreen = false;
 const onDocumentFullLoad = function () {
   const s = document.createElement('script');
   s.src = chrome.runtime.getURL("/js/content/eventListener.js");
@@ -8,8 +8,13 @@ const onDocumentFullLoad = function () {
   nowIsFullScreen = document.fullscreen;
   setOption('settedFullscreen', nowIsFullScreen);
   $.initialize(".content-container", function () {
-    rightSidebar = $(this);
-    $(this).hide();
+    videoInfoBar = $(this);
+    getAllOptions(function (options) {
+      if (options.hideVideoInfoBar)
+        $(videoInfoBar).hide();
+      else
+        $(videoInfoBar).show();
+    });
   });
 
   $.initialize("video", function () {
@@ -55,10 +60,7 @@ const onDocumentFullLoad = function () {
               $(".arrow-right").click();
             }
           });
-
-
         }
-
       });
     });
   });
@@ -83,11 +85,13 @@ function setOption(option, value) {
 
 function getAllOptions(callback) {
   chrome.runtime.sendMessage({ action: "OPTIONS_ALL_GET" }, function (response, result) {
+    //console.log('response: ', response);
     callback(response);
   });
 }
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  //console.log('onMessage.addListener: ', message);
   if (message.action) {
     switch (message.action) {
       case "START_PLAY":

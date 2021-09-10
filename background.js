@@ -1,100 +1,73 @@
 const options = {
   playerStarted: false,
   isFullScreen: true,
+  hideVideoInfoBar: true,
   playerPaused: false,
   playlistFinished: false,
-  settedFullscreen:false
+  settedFullscreen: false,
+  optionsLoaded: false,
 };
 
 chrome.runtime.onInstalled.addListener(() => {
-  initOptions();
+  initAllOptions().then(() => { });
 });
 
-chrome.runtime.onMessage.addListener( (message, sender, sendResponse) => {
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   let action = message.action;
-
   switch (action) {
     case "OPTION_GET":
       sendResponse(options[message.option], false);
       break;
 
     case "OPTION_SET":
-      dbSaveOption(message.option, message.value, function () {
-        options[message.option] = message.value;
+      dbSaveOption(message.option, message.value)
+        .then((res) => { sendResponse(options); });
+      break;
+
+    case "OPTIONS_ALL_GET":
+      // fixed bad reads data fro storage without keep-alive service worker
+      initAllOptions().then(() => {
         sendResponse(options);
       });
       break;
 
-    case "OPTIONS_ALL_GET":
-      sendResponse(options);
-      break;
-      
     default:
+      sendResponse("piingggg");
       break;
   }
   return true;
 });
 
-function initOptions() {
+function initAllOptions() {
+  let promiseArr = [];
   for (const [key, value] of Object.entries(options)) {
-    dbGetOption(key, function (res) {
-      if (res[key]) { options[key] = res[key];}
+    const promise = new Promise((resolve, reject) => {
+      chrome.storage.local.get([key], (result) => {
+        if (chrome.runtime.lastError)
+          reject(chrome.runtime.lastError, value);
+        resolve(result);
+      });
     });
+    promiseArr.push(promise);
   }
-}
 
-function dbGetOption(key, callback) {
-  chrome.storage.sync.get(key, function (result) {
-    callback(result);
+  return Promise.all(promiseArr).then(values => {
+    values.forEach(val => {
+      for (const [key, value] of Object.entries(val)) {
+        options[key] = value;
+      }
+    });
   });
 }
 
-function dbSaveOption(key, value, callback) {
+async function dbSaveOption(key, value, callback) {
   let obj = {};
   obj[key] = value;
-  chrome.storage.sync.set(obj, function () {
+
+  await chrome.storage.local.set(obj, async (res) => {
+    options[key] = value;
     if (typeof callback === "function") {
       callback(key, value);
     }
   });
-}
-
-//-------------------------------------- keep alive service --------------------------------------
-
-let lifeline;
-keepAlive();
-
-chrome.runtime.onConnect.addListener(port => {
-  if (port.name === 'keepAlive') {
-    lifeline = port;
-    setTimeout(keepAliveForced, 3000); 
-    port.onDisconnect.addListener(keepAliveForced);
-  }
-});
-
-function keepAliveForced() {
-  lifeline?.disconnect();
-  lifeline = null;
-  keepAlive();
-}
-
-async function keepAlive() {
-  if (lifeline) return;
-  for (const tab of await chrome.tabs.query({ url: '*://*/*' })) {
-    try {
-      await chrome.scripting.executeScript({
-        target: { tabId: tab.id },
-        function: () => chrome.runtime.connect({ name: 'keepAlive' }),
-      });
-      chrome.tabs.onUpdated.removeListener(retryOnTabUpdate);
-      return;
-    } catch (e) {}
-  }
-  chrome.tabs.onUpdated.addListener(retryOnTabUpdate);
-}
-
-async function retryOnTabUpdate(tabId, info, tab) {
-  if (info.url && /^(file|https?):/.test(info.url)) {
-    keepAlive();
-  }
 }
