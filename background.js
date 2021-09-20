@@ -1,15 +1,20 @@
 const options = {
   playerStarted: false,
-  isFullScreen: true,
+  playerIsFullScreen: true,
   hideVideoInfoBar: true,
   playerPaused: false,
   playlistFinished: false,
-  settedFullscreen: false,
-  optionsLoaded: false,
+  videoOptionDefaultMuted: true,
+  videoOptionMuted: true,
+  videoVolume: 0
 };
 
 chrome.runtime.onInstalled.addListener(() => {
-  initAllOptions().then(() => { });
+  initAllOptions().then(async () => {
+    await dbSaveOption("playerPaused", false);
+    await dbSaveOption("playerStarted", false);
+    await dbSaveOption("playlistFinished", false);
+  });
 });
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
