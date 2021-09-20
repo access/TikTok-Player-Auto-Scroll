@@ -10,4 +10,4 @@ When the playlist ends, the application automatically restarts the tab and loads
 
 
 
-   > Chrome Play Market [Auto Scroll - TikTok Player](https://chrome.google.com/webstore/detail/dbmdglbpkackbphfbhikkadbmelgcjhf).
+   > Chrome Play Market [Auto Scroll for TikTok Player](https://chrome.google.com/webstore/detail/dbmdglbpkackbphfbhikkadbmelgcjhf).
