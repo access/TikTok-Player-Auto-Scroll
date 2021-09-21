@@ -25,11 +25,18 @@ function nextLoadRoute(route) {
 }
 
 const onDocumentFullLoad = function () {
-  if (window.next.router)
-    window.next.router.events.on('routeChangeComplete', (url) => {
-      if (url === '/trending')
-        lock = false;
-    });
+  const eventSubscribe = function () {
+    if (typeof window.next.router !== "undefined")
+      window.next.router.events.on('routeChangeComplete', (url) => {
+        if (url === '/trending')
+          lock = false;
+      });
+    else
+      setTimeout(() => {
+        eventSubscribe();
+      }, 500);
+  }
+  eventSubscribe();
 };
 
 if (document.readyState === "complete" || (document.readyState !== "loading" && !document.documentElement.doScroll)) {
